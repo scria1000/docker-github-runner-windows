@@ -8,19 +8,14 @@
 #docker run mcr.microsoft.com/windows/servercore/insider:10.0.{build}.{revision}
 #tag reference: https://mcr.microsoft.com/en-us/product/windows/servercore/insider/tags
 
-#Win10
-#FROM mcr.microsoft.com/windows/servercore/insider:10.0.19035.1
+FROM mcr.microsoft.com/dotnet/framework/runtime:4.8-windowsservercore-ltsc2019
 
-#Win11
-FROM mcr.microsoft.com/windows/servercore/insider:10.0.26085.1
-
-#input GitHub runner version argument
 ARG RUNNER_VERSION
 
-LABEL Author="Marcel L"
-LABEL Email="pwd9000@hotmail.co.uk"
-LABEL GitHub="https://github.com/Pwd9000-ML"
-LABEL BaseImage="servercore/insider:10.0.20348.1"
+LABEL Author="scria1000"
+LABEL Email="91804886+scria1000@users.noreply.github.com"
+LABEL GitHub="https://github.com/scria1000"
+LABEL BaseImage="framework/runtime:4.8-windowsservercore-ltsc2019"
 LABEL RunnerVersion=${RUNNER_VERSION}
 
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
@@ -29,16 +24,38 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 WORKDIR /actions-runner
 
 #Install chocolatey
-ADD scripts/Install-Choco.ps1 .
-RUN .\Install-Choco.ps1 -Wait; \
+ADD https://chocolatey.org/install.ps1 ./Install-Choco.ps1
+RUN .\Install-Choco.ps1; \
     Remove-Item .\Install-Choco.ps1 -Force
+	
+RUN choco install -y powershell-core
 
-#Install Git, GitHub-CLI, Azure-CLI and PowerShell Core with Chocolatey (add more tooling if needed at build)
+SHELL ["pwsh", "-Command", "$ErrorActionPreference = 'Stop';"]
+
+WORKDIR /actions-runner
+
 RUN choco install -y \
-    git \
-    gh \
-    powershell-core \
-    azure-cli
+    7zip \
+    aria2 \
+    jq \
+    git.install --params "'/GitAndUnixToolsOnPath /NoAutoCrlf /WindowsTerminalProfile /NoShellIntegration /NoCredentialManager'" \
+    gh
+	
+RUN choco install -y vswhere
+
+RUN Set-PSRepository PSGallery -InstallationPolicy Trusted; Install-Module VSSetup -Force
+	
+RUN choco install -y visualstudio2019enterprise --params "'--nocache'"
+
+RUN choco install -y visualstudio2019-workload-nativedesktop --params "'--includeRecommended --nocache --add Microsoft.VisualStudio.Component.VC.ATL --add Microsoft.VisualStudio.Component.VC.ATL.Spectre --add Microsoft.VisualStudio.Component.VC.ATLMFC --add Microsoft.VisualStudio.Component.VC.ATLMFC.Spectre --add Microsoft.VisualStudio.Component.Windows10SDK --add Microsoft.VisualStudio.Component.Windows11SDK.22000'"
+
+RUN choco install -y visualstudio2019-workload-visualstudioextension
+
+RUN choco install -y windowsdriverkit11
+
+RUN Expand-Archive 'C:\\Program Files (x86)\\Windows Kits\\10\\Vsix\\VS2019\\WDK.vsix' -DestinationPath .\\WDKVSIX; \
+	Copy-Item -Path '.\\WDKVSIX\\$MSBuild\\*' -Destination (Join-Path $(Get-VSSetupInstance).InstallationPath 'MSBuild') -Recurse -Force; \
+	Remove-Item ".\\WDKVSIX" -Force -Recurse
 
 #Download GitHub Runner based on RUNNER_VERSION argument (Can use: Docker build --build-arg RUNNER_VERSION=x.y.z)
 RUN Invoke-WebRequest -Uri "https://github.com/actions/runner/releases/download/v$env:RUNNER_VERSION/actions-runner-win-x64-$env:RUNNER_VERSION.zip" -OutFile "actions-runner.zip"; \
