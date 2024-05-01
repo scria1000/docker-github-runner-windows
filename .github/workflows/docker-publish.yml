@@ -1,4 +1,4 @@
-name: Docker
+name: Publish Docker image
 
 on: [workflow_dispatch]
 
@@ -15,7 +15,7 @@ jobs:
       contents: read
     env:
       REGISTRY: index.docker.io
-      IMAGE_NAME: scria1000-github-runner-win
+      IMAGE_NAME: scria1000/github-runner-windows
       
     steps:
       - name: Checkout
