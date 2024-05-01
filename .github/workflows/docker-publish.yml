@@ -46,5 +46,5 @@ jobs:
         uses: github-early-access/generate-build-provenance@main
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.get-digest.outputs.digest }}
+          subject-digest: '${{ steps.get-digest.outputs.digest }}'
           push-to-registry: true
