@@ -8,6 +8,15 @@ env:
 jobs:
   docker:
     runs-on: windows-2019
+    permissions:
+      id-token: write
+      packages: write
+      attestations: write
+      contents: read
+    env:
+      REGISTRY: index.docker.io
+      IMAGE_NAME: scria1000-github-runner-win
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -15,7 +24,7 @@ jobs:
       - name: Docker Build & Push Action
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
-          image: scria1000-github-runner-win
+          image: ${{ env.IMAGE_NAME }}
           tags: latest
           registry: docker.io 
           dockerfile: dockerfile
@@ -23,4 +32,19 @@ jobs:
           platform: windows/amd64
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          pushImage: false
+          pushImage: true
+
+      - name: Get digest of image built in previous step
+        id: get-digest
+        if: success()
+        shell: bash
+        run: |
+          digest=$(docker inspect --format '{{ index .RepoDigests 0 }}' ${{ env.IMAGE_NAME }} | cut -d "@" -f 2)
+          echo "digest=$digest" >> $GITHUB_OUTPUT
+
+      - name: Attest image
+        uses: github-early-access/generate-build-provenance@main
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.get-digest.outputs.digest }}
+          push-to-registry: true
