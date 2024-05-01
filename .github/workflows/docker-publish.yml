@@ -1,9 +1,6 @@
 name: Docker
 
-on:
-  push:
-    branches:
-      - 'main'
+on: [workflow_dispatch]
 
 env:
   RUNNER_VERSION: 2.316.0
